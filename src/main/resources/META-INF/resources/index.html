@@ -1,0 +1,213 @@
+<html lang="en">
+<head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>Job center scheduling - OptaPlanner Quarkus</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/webjars/font-awesome/css/all.css" />
+    <link rel="stylesheet" href="/style.css" />
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.1/dist/leaflet.css" integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14=" crossorigin="anonymous"/>
+</head>
+<style>
+
+#map { height: 600px; width: 50%;}
+
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+.wrap {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 35px;
+    background: white;
+    padding: 20px 10px;
+    margin-bottom: 100px;
+}
+.wrap:after {
+    content:" ";
+    display: block;
+    clear: both;
+}
+.filter {
+    width: 98.1481481481%;
+    float: left;
+    margin-left: 0.9259259259%;
+    margin-right: 0.9259259259%;
+    margin-bottom: 10px;
+    position: relative;
+}
+.buttons {
+    width: 31.4814814815%;
+    float: left;
+    margin-left: 0.9259259259%;
+    margin-right: 0.9259259259%;
+    margin-bottom: 10px;
+    cursor: pointer;
+    text-align: center;
+}
+.buttons a {
+    color: #0d7453;
+    display: block;
+    font-weight: bold;
+    text-decoration: none;
+}
+.btn-contents {
+    position: relative;
+    background: rgba(196, 184, 172, 0.5);
+}
+.header {
+    padding: 15px;
+    overflow: hidden;
+}
+.details {
+    display: none;
+    border: 2px solid #333;
+    background: #ffffff;
+    position: absolute;
+    z-index: 100;
+    color: #EEE;
+    margin-top: 20px;
+    min-height: 100px;
+}
+
+.mapDetails {
+    display: none;
+    border: 2px solid #333;
+    background: #ffffff;
+    position: absolute;
+    z-index: 100;
+    color: #EEE;
+    margin-top: 20px;
+    min-height: 100px;
+}
+
+.detail {
+    position: absolute;
+    width: 500px;
+    padding: 25px 10px 0 20px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+.detail p {
+    margin: 0;
+    padding: 0;
+}
+.close {
+    font-size:22px;
+    cursor: pointer;
+    position: absolute;
+    right:10px;
+    top:5px;
+}
+
+.idle-grad {
+  width:100%;
+  height:100%;
+  background: linear-gradient(45deg, 
+  			  #edf6fc 25%, #f7e4ed 25%, 
+  			  #f7e4ed 50%, #edf6fc 50%, 
+  			  #edf6fc 75%,#f7e4ed 75%);
+  background-size:100px 100px;
+
+}
+
+</style>
+
+
+<body>
+
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="https://www.optaplanner.org">
+            <img width="50" height="50" src="optaPlannerIcon.png" alt="OptaPlanner logo">
+        </a> <h1>Field Service Technician Scheduling</h1>
+        
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<div class="mb-2">
+        <button id="solveButton" type="button" class="btn btn-success">
+            <span class="fas fa-play"></span> Start Solving
+        </button>
+        <button id="stopSolvingButton" type="button" class="btn btn-danger">
+            <span class="fas fa-stop"></span> Stop Solving
+        </button>
+        <span id="score" class="score ml-2 align-middle font-weight-bold">Score: ?</span>
+        &nbsp;<a id="summary" href="#" class="float-center" data-toggle="modal" data-target="#scoreDialog">
+              <i class="fa fa-info-circle"></i>
+            </a>        
+        
+    </nav>
+    <div class="sticky-top d-flex justify-content-center align-items-center" aria-live="polite" aria-atomic="true">
+        <div id="notificationPanel" style="position: absolute; top: .5rem;"></div>
+    </div>
+
+        
+<!-- 
+          <h5>
+            <BR>Score Summary
+            <a id="summary" href="#" class="float-center" data-toggle="modal" data-target="#scoreDialog">
+              <i class="fa fa-info-circle"></i>
+            </a>
+          </h5>
+-->          
+    </div>
+
+        <div id="popup" class="details">
+
+
+        </div>  
+
+		<div class="modal fade" id="scoreDialog" tabindex="-1" role="dialog">
+		  <div class="modal-dialog modal-lg" role="dialog">
+		    <div class="modal-content">
+		      <div class="modal-header">
+		        <h5>Score explanation</h5>
+		        <button type="button" class="close" data-dismiss="modal">
+		          <span>&times;</span>
+		        </button>
+		      </div>
+		      <div class="modal-body">
+		        <pre id="scoreInfo">T
+		        </pre>
+		      </div>
+		    </div>
+		  </div>
+		</div>
+
+        <!-- <div class="float-right">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><span id="jobFrequencyValue"></span> new jobs per minute</p>
+                    <input type="range" min="0" max="60" value="25" id="jobFrequencyRange"/>
+                </div>
+
+                <div class="col-md-6">
+                    <p>Job duration <span id="jobLengthValue"></span> seconds</p>
+                    <input type="range" min="10" max="60" value="30" id="jobLengthRange"/>
+                </div>
+            </div>
+        </div> -->
+
+    <div class="tab-content" id="myTabContent">
+        <table class="table table-borderless table-striped" id="jobTable">
+            <!-- Filled in by app.js -->
+        </table>
+    </div>
+</div>
+
+<div id="map1"><div id="map" class="mapDetails"><div class="close" style="z-index:101;" onClick="try { document.getElementById('map').style.display = 'none'; } catch (e) { alert(e); }"><i class="fa fa-times"></i></div></div>
+</div>
+<script src="/webjars/jquery/jquery.min.js"></script>
+<script src="/webjars/bootstrap/js/bootstrap.min.js"></script>
+<script src="/webjars/js-joda/dist/js-joda.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/leaflet.js"></script>
+<script src="https://www.mapquestapi.com/sdk/leaflet/v2.2/mq-map.js?key=qAlzULm9mj8G2kVnbpd3p8gTxiM5ASrP"></script>
+<script src="https://www.mapquestapi.com/sdk/leaflet/v2.2/mq-routing.js?key=qAlzULm9mj8G2kVnbpd3p8gTxiM5ASrP"></script>
+<script src="/app.js"></script>
+<script>
+
+</script>
+</body>
+</html>
